@@ -14,7 +14,7 @@ import 'package:hajiri/providers/class_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class StudentListScreen extends ConsumerStatefulWidget {
-  const StudentListScreen({Key? key}) : super(key: key);
+  const StudentListScreen({super.key});
 
   @override
   ConsumerState<StudentListScreen> createState() => _StudentListScreenState();

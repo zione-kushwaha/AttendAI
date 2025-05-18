@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hajiri/features/home/home_screen_new.dart';
 import 'package:hajiri/features/students/student_list_screen.dart';
 import 'package:hajiri/features/students/add_edit_student_screen.dart';
 import 'package:hajiri/features/students/bulk_add_students_screen.dart';
@@ -14,6 +13,7 @@ import 'package:hajiri/models/class_model.dart';
 import 'package:hajiri/models/student_model.dart';
 
 import '../../features/classes/class_detail_screen.dart';
+import '../../features/home/home_screen.dart';
 
 /// AppRouter manages all the routes in the application.
 /// It provides both named routes and helper methods for navigation.

@@ -12,8 +12,7 @@ import 'package:uuid/uuid.dart';
 class BulkStudentAddScreen extends ConsumerStatefulWidget {
   final ClassModel classModel;
 
-  const BulkStudentAddScreen({Key? key, required this.classModel})
-    : super(key: key);
+  const BulkStudentAddScreen({super.key, required this.classModel});
 
   @override
   ConsumerState<BulkStudentAddScreen> createState() =>

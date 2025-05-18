@@ -12,7 +12,6 @@ import 'package:hajiri/providers/attendance_provider.dart';
 import 'package:hajiri/providers/student_provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 class ClassAttendanceScreen extends ConsumerStatefulWidget {
   final ClassModel classModel;
