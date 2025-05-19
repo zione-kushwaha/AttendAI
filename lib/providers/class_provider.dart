@@ -25,13 +25,26 @@ class ClassNotifier extends StateNotifier<List<ClassModel>> {
     _loadClasses();
   }
 
-  // Delete a class
+  // Delete a class and all associated students
   Future<void> deleteClass(String classId) async {
+    // Get the class to delete
     final classToDelete = _db.classesBox.values.firstWhere(
       (element) => element.id == classId,
       orElse: () => throw Exception('ClassModel with id $classId not found'),
     );
 
+    // Find all students associated with this class
+    final studentsToDelete =
+        _db.studentsBox.values
+            .where((student) => student.classIds.contains(classId))
+            .toList();
+
+    // Delete all students associated with this class
+    for (final student in studentsToDelete) {
+      await student.delete();
+    }
+
+    // Delete the class
     await classToDelete.delete();
     _loadClasses();
   }

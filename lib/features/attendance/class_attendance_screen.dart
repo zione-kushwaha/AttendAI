@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hajiri/common/widgets/custom_app_bar.dart';
@@ -44,7 +43,8 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
         ref
             .watch(studentProvider)
             .where((student) => student.classIds.contains(widget.classModel.id))
-            .toList();
+            .toList()
+          ..sort((a, b) => a.rollNumber.compareTo(b.rollNumber));
 
     // Get all attendance for the selected day
     final selectedDayAttendance =

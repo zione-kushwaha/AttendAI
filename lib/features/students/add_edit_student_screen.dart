@@ -73,6 +73,7 @@ class _AddEditStudentScreenState extends ConsumerState<AddEditStudentScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
             Center(
@@ -142,9 +143,13 @@ class _AddEditStudentScreenState extends ConsumerState<AddEditStudentScreen> {
                 hintText: 'Enter roll number',
                 prefixIcon: Icon(Icons.numbers),
               ),
+              keyboardType: TextInputType.number,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter a roll number';
+                }
+                if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                  return 'Please enter numbers only';
                 }
                 return null;
               },
@@ -240,6 +245,27 @@ class _AddEditStudentScreenState extends ConsumerState<AddEditStudentScreen> {
           const SnackBar(content: Text('Please select at least one class')),
         );
         return;
+      } // Check for duplicate roll numbers within the same classes
+      final studentNotifier = ref.read(studentProvider.notifier);
+      final rollNumber = _rollNumberController.text;
+      final excludeStudentId = _isEditing ? widget.student!.id : null;
+
+      for (final classId in _selectedClassIds) {
+        if (studentNotifier.hasRollNumberInClass(
+          rollNumber,
+          classId,
+          excludeStudentId: excludeStudentId,
+        )) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Roll number $rollNumber already exists in class. Please use a unique roll number.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
       }
 
       // Parse additional info

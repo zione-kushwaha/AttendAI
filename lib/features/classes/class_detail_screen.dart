@@ -24,12 +24,14 @@ class ClassDetailScreen extends ConsumerWidget {
         ref
             .watch(studentProvider)
             .where((student) => student.classIds.contains(classModel.id))
-            .toList();
+            .toList()
+          ..sort((a, b) => a.rollNumber.compareTo(b.rollNumber));
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         body: NestedScrollView(
+          physics: const BouncingScrollPhysics(),
           headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
             return <Widget>[
               SliverAppBar(
@@ -63,14 +65,14 @@ class ClassDetailScreen extends ConsumerWidget {
                             children: [
                               Icon(
                                 Icons.subject,
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: .8),
                                 size: 16,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 'Subject: ${classModel.subject}',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: .8),
                                   fontSize: 14,
                                 ),
                               ),
@@ -81,14 +83,14 @@ class ClassDetailScreen extends ConsumerWidget {
                             children: [
                               Icon(
                                 Icons.access_time,
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: .8),
                                 size: 16,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 'Schedule: ${_formatScheduleString(classModel.schedule)}',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: .8),
                                   fontSize: 14,
                                 ),
                               ),
@@ -99,7 +101,7 @@ class ClassDetailScreen extends ConsumerWidget {
                             children: [
                               Icon(
                                 Icons.location_on,
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: .8),
                                 size: 16,
                               ),
                               const SizedBox(width: 8),
@@ -108,7 +110,7 @@ class ClassDetailScreen extends ConsumerWidget {
                                   'Description: ${classModel.description ?? "N/A"}',
                                   maxLines: 1,
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
+                                    color: Colors.white.withValues(alpha: .8),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -313,8 +315,8 @@ class ClassDetailScreen extends ConsumerWidget {
           StylishContainer(
             gradient: LinearGradient(
               colors: [
-                AppColors.primary.withOpacity(0.7),
-                AppColors.primary.withOpacity(0.4),
+                AppColors.primary.withValues(alpha: .7),
+                AppColors.primary.withValues(alpha: .4),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -348,7 +350,7 @@ class ClassDetailScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           if (isClassToday)
             StylishContainer(
-              color: AppColors.secondary.withOpacity(0.1),
+              color: AppColors.secondary.withValues(alpha: .1),
               borderColor: AppColors.secondary,
               borderWidth: 1,
               margin: const EdgeInsets.only(bottom: 24),
@@ -417,7 +419,7 @@ class ClassDetailScreen extends ConsumerWidget {
             return StylishContainer(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              color: isToday ? AppColors.secondary.withOpacity(0.1) : null,
+              color: isToday ? AppColors.secondary.withValues(alpha: .1) : null,
               borderColor: isToday ? AppColors.secondary : null,
               borderWidth: isToday ? 1 : 0,
               child: Row(
@@ -428,7 +430,7 @@ class ClassDetailScreen extends ConsumerWidget {
                             ? AppColors.secondary
                             : Theme.of(
                               context,
-                            ).colorScheme.primary.withOpacity(0.7),
+                            ).colorScheme.primary.withValues(alpha: .7),
                     child: Text(
                       day[0],
                       style: const TextStyle(color: Colors.white),
@@ -467,10 +469,10 @@ class ClassDetailScreen extends ConsumerWidget {
               duration: const Duration(milliseconds: 300),
               delay: Duration(milliseconds: 100 * index),
             );
-          }).toList(),
+          }),
           const SizedBox(height: 24),
           StylishContainer(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: .05),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

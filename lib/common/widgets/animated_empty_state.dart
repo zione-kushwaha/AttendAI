@@ -15,7 +15,7 @@ class AnimatedEmptyState extends StatelessWidget {
   final bool showGradient;
 
   const AnimatedEmptyState({
-    Key? key,
+    super.key,
     required this.message,
     this.buttonText,
     this.onButtonPressed,
@@ -24,7 +24,7 @@ class AnimatedEmptyState extends StatelessWidget {
     this.icon,
     this.iconColor,
     this.showGradient = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +50,9 @@ class AnimatedEmptyState extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     color:
                         showGradient
-                            ? AppColors.primary.withOpacity(0.7)
-                            : iconColor?.withOpacity(0.1) ??
-                                theme.colorScheme.primary.withOpacity(0.1),
+                            ? AppColors.primary.withValues(alpha: .7)
+                            : iconColor?.withValues(alpha: .1) ??
+                                theme.colorScheme.primary.withValues(alpha: .1),
                     child: Icon(
                       icon,
                       size: (animationSize ?? 140) * 0.5,

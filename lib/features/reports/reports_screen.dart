@@ -1,6 +1,4 @@
 import 'dart:io';
-
-import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -9,14 +7,14 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
-
-import 'package:hajiri/common/widgets/custom_app_bar.dart';
 import 'package:hajiri/common/widgets/empty_state_widget.dart';
 import 'package:hajiri/models/attendance_model.dart';
 import 'package:hajiri/models/class_model.dart';
 import 'package:hajiri/providers/attendance_provider.dart';
 import 'package:hajiri/providers/class_provider.dart';
 import 'package:hajiri/providers/student_provider.dart';
+
+import '../../models/student_model.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -36,7 +34,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final classes = ref.watch(classProvider);
 
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Reports', showBackButton: false),
       body:
           classes.isEmpty
               ? const EmptyStateWidget(
@@ -468,95 +465,172 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ],
               ),
         ),
-      );
+      ); // Get all dates in the range
+      final allDates = _getDatesInRange(_startDate, _endDate);
 
-      // Add detailed attendance page
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4.landscape,
-          build:
-              (context) => pw.Column(
-                children: [
-                  pw.Header(
-                    text: 'Detailed Attendance Records',
-                    textStyle: pw.TextStyle(
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.blue800,
-                    ),
-                  ),
-                  pw.SizedBox(height: 10),
-                  pw.Text(
-                    'Sorted by Roll Number',
-                    style: const pw.TextStyle(fontSize: 12),
-                  ),
-                  pw.SizedBox(height: 20),
-                  pw.Expanded(
-                    child: pw.Table.fromTextArray(
-                      context: context,
-                      border: pw.TableBorder.all(color: PdfColors.grey300),
-                      headerStyle: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.white,
-                      ),
-                      headerDecoration: pw.BoxDecoration(
-                        color: PdfColors.blue700,
-                      ),
-                      headers: [
-                        'Roll No',
-                        'Name',
-                        ..._getDatesInRange(
-                          _startDate,
-                          _endDate,
-                        ).map((d) => DateFormat('dd/MM').format(d)),
-                      ],
-                      data: [
-                        for (final student in students)
-                          [
-                            student.rollNumber,
-                            student.name,
-                            ..._getDatesInRange(_startDate, _endDate).map((
-                              date,
-                            ) {
-                              final record = attendanceRecords.firstWhere(
-                                (r) =>
-                                    r.studentId == student.id &&
-                                    _isSameDay(r.date, date),
-                                orElse:
-                                    () => AttendanceRecord(
-                                      classId: classId,
-                                      studentId: student.id,
-                                      date: date,
-                                      status: AttendanceStatus.absent,
-                                    ),
-                              );
-                              return _getStatusSymbol(record.status);
-                            }),
-                          ],
-                      ],
-                      cellAlignment: pw.Alignment.center,
-                      cellStyle: const pw.TextStyle(fontSize: 10),
-                      headerAlignment: pw.Alignment.center,
-                    ),
-                  ),
-                  pw.SizedBox(height: 10),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.start,
+      // Calculate page layout parameters
+      final pageFormat = PdfPageFormat.a4.landscape;
+      final double pageWidth = pageFormat.availableWidth;
+      final double pageHeight = pageFormat.availableHeight;
+      const double rollNoWidth = 50; // Fixed width for roll number column
+      const double nameWidth = 120; // Fixed width for name column
+      const double dateColumnWidth = 40; // Width for each date column
+      const double rowHeight = 25; // Height for each student row
+      const double headerHeight = 100; // Height for header section
+      const double footerHeight = 30; // Height for footer section
+
+      // Calculate how many date columns can fit on one page horizontally
+      final int datesPerPage =
+          ((pageWidth - rollNoWidth - nameWidth) / dateColumnWidth).floor();
+
+      // Calculate how many students can fit on one page vertically
+      final int studentsPerPage =
+          ((pageHeight - headerHeight - footerHeight) / rowHeight).floor();
+
+      // Split dates into chunks that will fit on a page horizontally
+      final dateChunks = <List<DateTime>>[];
+      for (int i = 0; i < allDates.length; i += datesPerPage) {
+        final end =
+            i + datesPerPage < allDates.length
+                ? i + datesPerPage
+                : allDates.length;
+        dateChunks.add(allDates.sublist(i, end));
+      }
+
+      // Split students into chunks that will fit on a page vertically
+      final studentChunks = <List<StudentModel>>[];
+      for (int i = 0; i < students.length; i += studentsPerPage) {
+        final end =
+            i + studentsPerPage < students.length
+                ? i + studentsPerPage
+                : students.length;
+        studentChunks.add(students.sublist(i, end));
+      }
+
+      // For each combination of date chunk and student chunk, create a new page
+      int totalPages = dateChunks.length * studentChunks.length;
+      int currentPage = 0;
+
+      for (
+        int dateChunkIndex = 0;
+        dateChunkIndex < dateChunks.length;
+        dateChunkIndex++
+      ) {
+        final dateChunk = dateChunks[dateChunkIndex];
+
+        for (
+          int studentChunkIndex = 0;
+          studentChunkIndex < studentChunks.length;
+          studentChunkIndex++
+        ) {
+          currentPage++;
+          final studentChunk = studentChunks[studentChunkIndex];
+
+          pdf.addPage(
+            pw.Page(
+              pageFormat: pageFormat,
+              build:
+                  (context) => pw.Column(
                     children: [
-                      pw.Text(
-                        'Status Legend: ',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      pw.Header(
+                        text:
+                            'Detailed Attendance Records (Page $currentPage of $totalPages)',
+                        textStyle: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.blue800,
+                        ),
                       ),
-                      pw.Text('P - Present, '),
-                      pw.Text('A - Absent, '),
-                      pw.Text('L - Late, '),
-                      pw.Text('E - Excused'),
+                      pw.SizedBox(height: 10),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text(
+                            'Date Range: ${DateFormat('dd/MM').format(dateChunk.first)} - ${DateFormat('dd/MM').format(dateChunk.last)}',
+                            style: const pw.TextStyle(fontSize: 12),
+                          ),
+                          pw.Text(
+                            'Sorted by Roll Number',
+                            style: const pw.TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      pw.SizedBox(height: 20),
+                      pw.Expanded(
+                        child: pw.Table.fromTextArray(
+                          context: context,
+                          border: pw.TableBorder.all(color: PdfColors.grey300),
+                          headerStyle: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                          headerDecoration: pw.BoxDecoration(
+                            color: PdfColors.blue700,
+                          ),
+                          headers: [
+                            'Roll No',
+                            'Name',
+                            ...dateChunk.map(
+                              (d) => DateFormat('dd/MM').format(d),
+                            ),
+                          ],
+                          data:
+                              studentChunk
+                                  .map(
+                                    (student) => [
+                                      student.rollNumber,
+                                      student.name,
+                                      ...dateChunk.map((date) {
+                                        final record = attendanceRecords
+                                            .firstWhere(
+                                              (r) =>
+                                                  r.studentId == student.id &&
+                                                  _isSameDay(r.date, date),
+                                              orElse:
+                                                  () => AttendanceRecord(
+                                                    classId: classId,
+                                                    studentId: student.id,
+                                                    date: date,
+                                                    status:
+                                                        AttendanceStatus.absent,
+                                                  ),
+                                            );
+                                        return _getStatusSymbol(record.status);
+                                      }),
+                                    ],
+                                  )
+                                  .toList(),
+                          cellAlignment: pw.Alignment.center,
+                          cellStyle: const pw.TextStyle(fontSize: 10),
+                          headerAlignment: pw.Alignment.center,
+                          columnWidths: {
+                            0: const pw.FixedColumnWidth(
+                              rollNoWidth,
+                            ), // Roll No
+                            1: const pw.FixedColumnWidth(nameWidth), // Name
+                          },
+                        ),
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'Status Legend: ',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                          ),
+                          pw.Text('P - Present, '),
+                          pw.Text('A - Absent, '),
+                          pw.Text('L - Late, '),
+                          pw.Text('E - Excused'),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-        ),
-      );
+            ),
+          );
+        }
+      }
 
       // Save the PDF
       final output = await getTemporaryDirectory();
@@ -908,11 +982,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
       // Create PDF document
       final pdf = pw.Document();
+      final pageFormat = PdfPageFormat.a4;
 
       // Add cover page
       pdf.addPage(
         pw.Page(
-          pageFormat: PdfPageFormat.a4,
+          pageFormat: pageFormat,
           build:
               (context) => pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -964,118 +1039,152 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         ),
       );
 
-      // Add summary page
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build:
-              (context) => pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Header(
-                    text: 'Student Attendance Summary',
-                    textStyle: pw.TextStyle(
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.blue800,
-                    ),
-                  ),
-                  pw.SizedBox(height: 10),
-                  pw.Text(
-                    'Sorted by Roll Number',
-                    style: const pw.TextStyle(fontSize: 12),
-                  ),
-                  pw.SizedBox(height: 20),
-                  pw.TableHelper.fromTextArray(
-                    context: context,
-                    border: pw.TableBorder.all(color: PdfColors.grey300),
-                    headerStyle: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.white,
-                    ),
-                    headerDecoration: pw.BoxDecoration(
-                      color: PdfColors.blue700,
-                    ),
-                    headers: [
-                      'Roll No',
-                      'Name',
-                      'Present',
-                      'Absent',
-                      'Late',
-                      'Attendance %',
-                    ],
-                    data:
-                        students.map((student) {
-                          final records =
-                              attendanceRecords
-                                  .where((r) => r.studentId == student.id)
-                                  .toList();
+      // Calculate how many students can fit in a single page
+      const int studentsPerPage =
+          25; // This can be adjusted based on design needs
 
-                          final present =
-                              records
-                                  .where(
-                                    (r) => r.status == AttendanceStatus.present,
-                                  )
-                                  .length;
-                          final total = records.length;
-                          final percentage =
-                              total > 0 ? (present / total * 100) : 0;
+      // Split students into chunks that will fit on each page
+      final studentChunks = <List<StudentModel>>[];
+      for (int i = 0; i < students.length; i += studentsPerPage) {
+        final end =
+            i + studentsPerPage < students.length
+                ? i + studentsPerPage
+                : students.length;
+        studentChunks.add(students.sublist(i, end));
+      }
 
-                          // Color code based on attendance percentage
-                          final color =
-                              percentage < 75
-                                  ? PdfColors.red
-                                  : percentage < 85
-                                  ? PdfColors.orange
-                                  : PdfColors.green;
+      // For each chunk of students, create a new page
+      for (int pageIndex = 0; pageIndex < studentChunks.length; pageIndex++) {
+        final pageTitle =
+            studentChunks.length > 1
+                ? 'Student Attendance Summary (Page ${pageIndex + 1} of ${studentChunks.length})'
+                : 'Student Attendance Summary';
 
-                          return [
-                            student.rollNumber,
-                            student.name,
-                            present.toString(),
-                            (records.length - present).toString(),
-                            records
-                                .where((r) => r.status == AttendanceStatus.late)
-                                .length
-                                .toString(),
-                            pw.Text(
-                              '${percentage.toStringAsFixed(1)}%',
-                              style: pw.TextStyle(color: color),
-                            ),
-                          ];
-                        }).toList(),
-                    cellAlignment: pw.Alignment.center,
-                    cellStyle: const pw.TextStyle(fontSize: 10),
-                    headerAlignment: pw.Alignment.center,
-                  ),
-                  pw.SizedBox(height: 20),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'Attendance Percentage Legend: ',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+        final studentChunk = studentChunks[pageIndex];
+
+        pdf.addPage(
+          pw.Page(
+            pageFormat: pageFormat,
+            build:
+                (context) => pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Header(
+                      text: pageTitle,
+                      textStyle: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.blue800,
                       ),
-                      pw.Text(
-                        'Below 75% ',
-                        style: pw.TextStyle(color: PdfColors.red),
+                    ),
+                    pw.SizedBox(height: 10),
+                    pw.Text(
+                      'Sorted by Roll Number',
+                      style: const pw.TextStyle(fontSize: 12),
+                    ),
+                    pw.SizedBox(height: 20),
+                    pw.TableHelper.fromTextArray(
+                      context: context,
+                      border: pw.TableBorder.all(color: PdfColors.grey300),
+                      headerStyle: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.white,
                       ),
-                      pw.Text('| '),
-                      pw.Text(
-                        '75-85% ',
-                        style: pw.TextStyle(color: PdfColors.orange),
+                      headerDecoration: pw.BoxDecoration(
+                        color: PdfColors.blue700,
                       ),
-                      pw.Text('| '),
-                      pw.Text(
-                        'Above 85%',
-                        style: pw.TextStyle(color: PdfColors.green),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-        ),
-      );
+                      headers: [
+                        'Roll No',
+                        'Name',
+                        'Present',
+                        'Absent',
+                        'Late',
+                        'Attendance %',
+                      ],
+                      data:
+                          studentChunk.map((student) {
+                            final records =
+                                attendanceRecords
+                                    .where((r) => r.studentId == student.id)
+                                    .toList();
+
+                            final present =
+                                records
+                                    .where(
+                                      (r) =>
+                                          r.status == AttendanceStatus.present,
+                                    )
+                                    .length;
+                            final absent =
+                                records
+                                    .where(
+                                      (r) =>
+                                          r.status == AttendanceStatus.absent,
+                                    )
+                                    .length;
+                            final late =
+                                records
+                                    .where(
+                                      (r) => r.status == AttendanceStatus.late,
+                                    )
+                                    .length;
+                            final total = records.length;
+                            final percentage =
+                                total > 0 ? (present / total * 100) : 0;
+
+                            // Color code based on attendance percentage
+                            final color =
+                                percentage < 75
+                                    ? PdfColors.red
+                                    : percentage < 85
+                                    ? PdfColors.orange
+                                    : PdfColors.green;
+
+                            return [
+                              student.rollNumber,
+                              student.name,
+                              present.toString(),
+                              absent.toString(),
+                              late.toString(),
+                              pw.Text(
+                                '${percentage.toStringAsFixed(1)}%',
+                                style: pw.TextStyle(color: color),
+                              ),
+                            ];
+                          }).toList(),
+                      cellAlignment: pw.Alignment.center,
+                      cellStyle: const pw.TextStyle(fontSize: 10),
+                      headerAlignment: pw.Alignment.center,
+                    ),
+                    pw.SizedBox(height: 20),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'Attendance Percentage Legend: ',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.Text(
+                          'Below 75% ',
+                          style: pw.TextStyle(color: PdfColors.red),
+                        ),
+                        pw.Text('| '),
+                        pw.Text(
+                          '75-85% ',
+                          style: pw.TextStyle(color: PdfColors.orange),
+                        ),
+                        pw.Text('| '),
+                        pw.Text(
+                          'Above 85%',
+                          style: pw.TextStyle(color: PdfColors.green),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+          ),
+        );
+      }
 
       // Save the PDF
       final output = await getTemporaryDirectory();
@@ -1471,9 +1580,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ],
               ),
         ),
-      );
+      ); // Add attendance distribution overview page
+      // Define student pagination constants
+      const int studentsPerPage = 24;
 
-      // Add attendance distribution page
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -1484,7 +1594,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   pw.Header(
                     level: 0,
                     child: pw.Text(
-                      'Attendance Distribution',
+                      'Attendance Distribution (Overview)',
                       style: pw.TextStyle(
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
@@ -1530,53 +1640,73 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     ),
                   ),
                   pw.SizedBox(height: 10),
-                  pw.TableHelper.fromTextArray(
-                    headers: [
-                      'Roll No',
-                      'Name',
-                      'Present Days',
-                      'Total Days',
-                      'Attendance Rate',
-                    ],
-                    data:
-                        students.map((student) {
-                          final studentRecords =
-                              attendanceRecords
-                                  .where((r) => r.studentId == student.id)
-                                  .toList();
 
-                          final presentDays =
-                              studentRecords
-                                  .where(
-                                    (r) => r.status == AttendanceStatus.present,
-                                  )
-                                  .length;
-                          final totalDays = studentRecords.length;
-                          final attendanceRate =
-                              totalDays > 0
-                                  ? (presentDays / totalDays * 100)
-                                  : 0;
+                  // If the student count is small enough to fit on one page, just show the table
+                  ...(() {
+                    if (students.length <= studentsPerPage) {
+                      return [
+                        pw.TableHelper.fromTextArray(
+                          headers: [
+                            'Roll No',
+                            'Name',
+                            'Present Days',
+                            'Total Days',
+                            'Attendance Rate',
+                          ],
+                          data:
+                              students.map((student) {
+                                final studentRecords =
+                                    attendanceRecords
+                                        .where((r) => r.studentId == student.id)
+                                        .toList();
 
-                          return [
-                            student.rollNumber,
-                            student.name,
-                            presentDays.toString(),
-                            totalDays.toString(),
-                            '${attendanceRate.toStringAsFixed(1)}%',
-                          ];
-                        }).toList(),
-                    cellAlignment: pw.Alignment.center,
-                    cellStyle: const pw.TextStyle(fontSize: 10),
-                    headerStyle: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.white,
-                    ),
-                    headerDecoration: pw.BoxDecoration(
-                      color: PdfColors.blue700,
-                    ),
-                    border: pw.TableBorder.all(color: PdfColors.grey300),
-                    headerAlignment: pw.Alignment.center,
-                  ),
+                                final presentDays =
+                                    studentRecords
+                                        .where(
+                                          (r) =>
+                                              r.status ==
+                                              AttendanceStatus.present,
+                                        )
+                                        .length;
+                                final totalDays = studentRecords.length;
+                                final attendanceRate =
+                                    totalDays > 0
+                                        ? (presentDays / totalDays * 100)
+                                        : 0;
+
+                                return [
+                                  student.rollNumber,
+                                  student.name,
+                                  presentDays.toString(),
+                                  totalDays.toString(),
+                                  '${attendanceRate.toStringAsFixed(1)}%',
+                                ];
+                              }).toList(),
+                          cellAlignment: pw.Alignment.center,
+                          cellStyle: const pw.TextStyle(fontSize: 10),
+                          headerStyle: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                          headerDecoration: pw.BoxDecoration(
+                            color: PdfColors.blue700,
+                          ),
+                          border: pw.TableBorder.all(color: PdfColors.grey300),
+                          headerAlignment: pw.Alignment.center,
+                        ),
+                      ];
+                    } else {
+                      return [
+                        pw.Text(
+                          'Student attendance data will be displayed on following pages',
+                          style: pw.TextStyle(
+                            fontStyle: pw.FontStyle.italic,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ];
+                    }
+                  })(),
                   pw.SizedBox(height: 20),
                   pw.Row(
                     children: [
@@ -1605,6 +1735,108 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
         ),
       );
+
+      // Add student attendance details pages with pagination
+      if (students.length > studentsPerPage) {
+        // Split students into chunks for pagination
+        final studentChunks = <List<StudentModel>>[];
+        for (var i = 0; i < students.length; i += studentsPerPage) {
+          final end =
+              (i + studentsPerPage < students.length)
+                  ? i + studentsPerPage
+                  : students.length;
+          studentChunks.add(students.sublist(i, end));
+        }
+
+        // Add a page for each chunk of students
+        for (var pageIndex = 0; pageIndex < studentChunks.length; pageIndex++) {
+          final pageStudents = studentChunks[pageIndex];
+
+          pdf.addPage(
+            pw.Page(
+              pageFormat: PdfPageFormat.a4,
+              build:
+                  (context) => pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Header(
+                        level: 0,
+                        child: pw.Text(
+                          'Student Attendance Details (Page ${pageIndex + 1} of ${studentChunks.length})',
+                          style: pw.TextStyle(
+                            fontSize: 16,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.blue800,
+                          ),
+                        ),
+                      ),
+                      pw.SizedBox(height: 20),
+                      pw.TableHelper.fromTextArray(
+                        headers: [
+                          'Roll No',
+                          'Name',
+                          'Present Days',
+                          'Total Days',
+                          'Attendance Rate',
+                        ],
+                        data:
+                            pageStudents.map((student) {
+                              final studentRecords =
+                                  attendanceRecords
+                                      .where((r) => r.studentId == student.id)
+                                      .toList();
+
+                              final presentDays =
+                                  studentRecords
+                                      .where(
+                                        (r) =>
+                                            r.status ==
+                                            AttendanceStatus.present,
+                                      )
+                                      .length;
+                              final totalDays = studentRecords.length;
+                              final attendanceRate =
+                                  totalDays > 0
+                                      ? (presentDays / totalDays * 100)
+                                      : 0;
+
+                              return [
+                                student.rollNumber,
+                                student.name,
+                                presentDays.toString(),
+                                totalDays.toString(),
+                                '${attendanceRate.toStringAsFixed(1)}%',
+                              ];
+                            }).toList(),
+                        cellAlignment: pw.Alignment.center,
+                        cellStyle: const pw.TextStyle(fontSize: 10),
+                        headerStyle: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.white,
+                        ),
+                        headerDecoration: pw.BoxDecoration(
+                          color: PdfColors.blue700,
+                        ),
+                        border: pw.TableBorder.all(color: PdfColors.grey300),
+                        headerAlignment: pw.Alignment.center,
+                      ),
+                      pw.Expanded(child: pw.SizedBox()),
+                      pw.Footer(
+                        leading: pw.Text(
+                          'Class: ${classItem.name}',
+                          style: const pw.TextStyle(fontSize: 10),
+                        ),
+                        title: pw.Text(
+                          'Page ${pageIndex + 1} of ${studentChunks.length}',
+                          style: const pw.TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+            ),
+          );
+        }
+      }
 
       // Save the PDF
       final output = await getTemporaryDirectory();

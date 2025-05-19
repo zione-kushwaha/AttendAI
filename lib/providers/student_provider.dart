@@ -51,6 +51,20 @@ class StudentNotifier extends StateNotifier<List<StudentModel>> {
         .where((student) => student.classIds.contains(classId))
         .toList();
   }
+
+  // Check if a roll number already exists in a class
+  bool hasRollNumberInClass(
+    String rollNumber,
+    String classId, {
+    String? excludeStudentId,
+  }) {
+    return state.any(
+      (student) =>
+          student.classIds.contains(classId) &&
+          student.rollNumber == rollNumber &&
+          (excludeStudentId == null || student.id != excludeStudentId),
+    );
+  }
 }
 
 final studentProvider =

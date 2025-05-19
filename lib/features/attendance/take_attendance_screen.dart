@@ -55,7 +55,8 @@ class _TakeAttendanceScreenState extends ConsumerState<TakeAttendanceScreen> {
         ref
             .watch(studentProvider)
             .where((student) => student.classIds.contains(widget.classModel.id))
-            .toList();
+            .toList()
+          ..sort((a, b) => a.rollNumber.compareTo(b.rollNumber));
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -100,18 +101,25 @@ class _TakeAttendanceScreenState extends ConsumerState<TakeAttendanceScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            '${widget.classModel.name} - ${widget.classModel.subject}',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+          SizedBox(
+            width: MediaQuery.of(context).size.width * 0.5,
+            child: Text(
+              '${widget.classModel.name} - ${widget.classModel.subject}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
             ),
           ),
-          Text(
-            DateFormat('EEE, MMM d, yyyy').format(_selectedDate),
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+          FittedBox(
+            child: Text(
+              DateFormat('EEE, MMM d, yyyy').format(_selectedDate),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
             ),
           ),
         ],

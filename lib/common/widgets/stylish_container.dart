@@ -20,7 +20,7 @@ class StylishContainer extends StatelessWidget {
   final double? elevation;
 
   const StylishContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.color,
     this.width,
@@ -37,7 +37,7 @@ class StylishContainer extends StatelessWidget {
     this.alignment = Alignment.center,
     this.transform,
     this.elevation,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +52,7 @@ class StylishContainer extends StatelessWidget {
         (elevation != null
             ? [
               BoxShadow(
-                color: AppColors.gray700.withOpacity(0.15),
+                color: AppColors.gray700.withValues(alpha: .15),
                 blurRadius: elevation! * 3,
                 spreadRadius: elevation! * 0.4,
                 offset: Offset(0, elevation! * 0.7),
@@ -99,7 +99,6 @@ class StylishContainer extends StatelessWidget {
     double? elevation,
   }) {
     return StylishContainer(
-      child: child,
       color: AppColors.primary,
       width: width,
       height: height,
@@ -107,6 +106,7 @@ class StylishContainer extends StatelessWidget {
       margin: margin,
       borderRadius: borderRadius,
       elevation: elevation,
+      child: child,
     );
   }
 
@@ -122,7 +122,6 @@ class StylishContainer extends StatelessWidget {
     double? elevation,
   }) {
     return StylishContainer(
-      child: child,
       width: width,
       height: height,
       padding: padding,
@@ -130,6 +129,7 @@ class StylishContainer extends StatelessWidget {
       borderRadius: borderRadius,
       gradient: gradient,
       elevation: elevation,
+      child: child,
     );
   }
 
@@ -145,7 +145,6 @@ class StylishContainer extends StatelessWidget {
     double? elevation,
   }) {
     return StylishContainer(
-      child: child,
       color: color,
       width: width,
       height: height,
@@ -154,6 +153,7 @@ class StylishContainer extends StatelessWidget {
           margin ?? const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       borderRadius: borderRadius,
       elevation: elevation ?? 4.0,
+      child: child,
     );
   }
 
@@ -169,7 +169,6 @@ class StylishContainer extends StatelessWidget {
     double? elevation,
   }) {
     return StylishContainer(
-      child: child,
       color: color,
       width: size,
       height: size,
@@ -179,6 +178,7 @@ class StylishContainer extends StatelessWidget {
       borderColor: borderColor,
       borderWidth: borderWidth,
       elevation: elevation,
+      child: child,
     );
   }
 }

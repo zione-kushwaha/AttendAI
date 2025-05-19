@@ -9,6 +9,8 @@ import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hajiri/common/theme/enhanced_app_theme.dart';
 
+import '../../common/widgets/custom_app_bar.dart';
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -27,11 +29,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     const SettingsScreen(),
   ];
 
+  final List<String> _titles = [
+    'Classes',
+    'Students',
+    'Attendance',
+    'Reports',
+    'Settings',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      appBar: CustomAppBar(
+        title: _titles[_selectedIndex],
+        showBackButton: false,
+      ),
       body: _screens[_selectedIndex].animate(
         key: ValueKey(_selectedIndex),
         effects: [

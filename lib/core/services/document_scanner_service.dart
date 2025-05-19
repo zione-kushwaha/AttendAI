@@ -1,68 +1,126 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:flutter_gemini/flutter_gemini.dart';
 
 class DocumentScannerService {
-  static final _textRecognizer = TextRecognizer();
+  // Gemini AI instance
+  static final Gemini _gemini = Gemini.instance;
+  static bool _isGeminiInitialized = false;
+
+  // API key for Gemini
+  static const String _apiKey = 'AIzaSyBQOAvo32t1etTBbqXiQqZ3tjSUfX64v-8';
+
+  // Improved prompt template
   static const String _promptTemplate = '''
-  Extract student information from the following text. The text contains student records with the following information:
-  - Name
+  Analyze this document image carefully and extract ONLY student names and roll numbers. 
+  The document contains student records in a structured format, typically with:
+  - Student Name
   - Roll Number
-  Each line represents a single student. Return the data in the following format:
+  
+  IMPORTANT INSTRUCTIONS:
+  1. Extract ONLY name and roll number pairs
+  2. Ignore all other information like headers, footers, page numbers, etc.
+  3. If a name or roll number is incomplete or unclear, skip that entry
+  4. For roll numbers, extract ONLY the numeric portion at the end (e.g., for "PUR078BCT037", extract "037")
+  5. Return the data in STRICT JSON format as shown below
+  
+  REQUIRED OUTPUT FORMAT:
   [
-    {"name": "Student Name", "rollNumber": "123"},
-    {"name": "Another Student", "rollNumber": "124"}
+    {"name": "Full Student Name", "rollNumber": "037"},
+    {"name": "Another Student Name", "rollNumber": "124"}
   ]
   
-  Text to process:
+  DO NOT include any additional text or explanations in your response.
   ''';
 
-  static Future<String> recognizeText(String imagePath) async {
-    final inputImage = InputImage.fromFile(File(imagePath));
-    final recognizedText = await _textRecognizer.processImage(inputImage);
-    return recognizedText.text;
+  // Initialize Gemini
+  static Future<void> _initGemini() async {
+    if (!_isGeminiInitialized) {
+      Gemini.init(apiKey: _apiKey);
+      _isGeminiInitialized = true;
+    }
   }
 
-  static Future<List<Map<String, String>>> analyzeWithGemini(
-      String text) async {
-    // Replace with your actual API key
-    const apiKey = 'AIzaSyAEL4-EdUdkEwq3yU1qZI-yL9IVa522pWg';
-    final model = GenerativeModel(
-      model: 'gemini-pro',
-      apiKey: apiKey,
-    );
+  // Method to analyze document image
+  static Future<List<Map<String, String>>> analyzeImageWithGemini(
+    File imageFile,
+  ) async {
+    await _initGemini();
+    print('Starting image analysis...');
 
     try {
-      final prompt = '$_promptTemplate\\n$text';
-      final content = [Content.text(prompt)];
-      final response = await model.generateContent(content);
+      // Read image bytes
+      final imageBytes = await imageFile.readAsBytes();
 
-      if (response.text == null) {
-        throw Exception('No response from Gemini AI');
+      // Make the API call
+      final response = await _gemini.textAndImage(
+        text: _promptTemplate,
+        images: [imageBytes],
+      );
+
+      if (response == null || response.content == null) {
+        throw Exception('Empty response from Gemini API');
       }
 
-      // Parse the JSON response
-      final responseText = response.text!;
+      final responseText =
+          response.content!.parts?.firstOrNull?.text?.trim() ?? '';
+      print('Raw response from Gemini: $responseText');
+
+      if (responseText.isEmpty) {
+        throw Exception('No content in Gemini response');
+      }
+
+      // Try to find JSON in the response
       final jsonStart = responseText.indexOf('[');
       final jsonEnd = responseText.lastIndexOf(']') + 1;
 
       if (jsonStart == -1 || jsonEnd == -1) {
-        throw Exception('Invalid response format from Gemini AI');
+        throw Exception('No valid JSON found in response: $responseText');
       }
 
       final jsonStr = responseText.substring(jsonStart, jsonEnd);
-      final List<dynamic> parsed = json.decode(jsonStr);
+      print('Extracted JSON: $jsonStr');
 
-      return parsed
-          .map<Map<String, String>>((item) => {
-                'name': item['name'] as String,
-                'rollNumber': item['rollNumber'] as String,
-              })
-          .toList();
+      // Parse the JSON
+      final List<dynamic> parsed;
+      try {
+        parsed = json.decode(jsonStr) as List;
+      } catch (e) {
+        throw Exception('Failed to parse JSON: $e');
+      }
+
+      // Validate and convert the data
+      return parsed.map((item) {
+        if (item is! Map<String, dynamic>) {
+          throw Exception('Invalid item format in response');
+        }
+        return {
+          'name': item['name']?.toString() ?? '',
+          'rollNumber': item['rollNumber']?.toString() ?? '',
+        };
+      }).toList();
     } catch (e) {
-      print('Error analyzing text with Gemini: $e');
-      rethrow;
+      print('Error in analyzeImageWithGemini: ${e.toString()}');
+
+      // Enhanced error handling
+      if (e.toString().contains('network') ||
+          e.toString().contains('socket') ||
+          e.toString().contains('timed out')) {
+        throw Exception(
+          'Network error. Please check your internet connection.',
+        );
+      } else if (e.toString().contains('401') ||
+          e.toString().contains('403') ||
+          e.toString().contains('API key')) {
+        throw Exception('Authentication failed. Check your API key.');
+      } else if (e.toString().contains('JSON') ||
+          e.toString().contains('format')) {
+        throw Exception(
+          'Failed to process the response. The document might be unclear.',
+        );
+      } else {
+        throw Exception('Failed to analyze document: ${e.toString()}');
+      }
     }
   }
 }

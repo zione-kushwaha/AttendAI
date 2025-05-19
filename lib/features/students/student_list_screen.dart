@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hajiri/common/widgets/custom_app_bar.dart';
 import 'package:hajiri/common/widgets/animated_empty_state.dart';
 import 'package:hajiri/common/widgets/stylish_container.dart';
 import 'package:hajiri/common/theme/enhanced_app_theme.dart';
 import 'package:hajiri/features/students/add_edit_student_screen.dart';
 import 'package:hajiri/features/students/bulk_add_students_screen.dart';
+import 'package:hajiri/features/students/document_scan_screen.dart';
 import 'package:hajiri/models/student_model.dart';
 import 'package:hajiri/models/class_model.dart';
 import 'package:hajiri/providers/student_provider.dart';
@@ -27,9 +27,9 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
   @override
   Widget build(BuildContext context) {
     final allStudents = ref.watch(studentProvider);
-    final classes = ref.watch(classProvider);
-
-    // Filter students based on search query and selected class
+    final classes = ref.watch(
+      classProvider,
+    ); // Filter students based on search query and selected class
     final filteredStudents =
         allStudents.where((student) {
           final matchesSearch =
@@ -46,8 +46,10 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
           return matchesSearch && matchesClass;
         }).toList();
 
+    // Sort students by roll number in ascending order
+    filteredStudents.sort((a, b) => a.rollNumber.compareTo(b.rollNumber));
+
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Students', showBackButton: false),
       body: Column(
         children: [
           Padding(
@@ -125,6 +127,7 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
                       animationAsset: 'assets/animations/empty_state.json',
                     )
                     : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.all(16),
                       itemCount: filteredStudents.length,
                       itemBuilder: (context, index) {
@@ -238,8 +241,8 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
                             )
                             .animate()
                             .fade(
-                              duration: const Duration(milliseconds: 300),
-                              delay: Duration(milliseconds: 50 * index),
+                              duration: const Duration(milliseconds: 30),
+                              delay: Duration(milliseconds: 5 * index),
                             )
                             .slideY(
                               begin: 0.1,
@@ -256,7 +259,7 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFloatingActionMenu(context),
         icon: const Icon(Icons.add),
-        label: const Text('Add Student'),
+        label: const Text('More Actions'),
         backgroundColor: AppColors.primary,
       ),
     );
@@ -300,16 +303,13 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
                   ListTile(
                     leading: CircleAvatar(
                       backgroundColor: AppColors.accent1,
-                      child: const Icon(
-                        Icons.import_export,
-                        color: Colors.white,
-                      ),
+                      child: const Icon(Icons.scanner, color: Colors.white),
                     ),
-                    title: const Text('Import/Export'),
-                    subtitle: const Text('Coming soon'),
+                    title: const Text('Scan & add'),
+                    subtitle: const Text('Scan docs to add student'),
                     onTap: () {
                       Navigator.pop(context);
-                      _showImportExportOptions(context);
+                      _showScanDocumentOptions(context);
                     },
                   ),
                 ],
@@ -399,12 +399,69 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
     );
   }
 
-  void _showImportExportOptions(BuildContext context) {
-    // Future feature: Import/Export functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Import/Export functionality coming soon!'),
-        behavior: SnackBarBehavior.floating,
+  // New method for showing document scan class selection
+  void _showScanDocumentOptions(BuildContext context) {
+    final classes = ref.read(classProvider);
+
+    if (classes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please create a class first before scanning student documents',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (context) => Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Select a Class for Document Scan',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ...classes
+                    .map(
+                      (classModel) => ListTile(
+                        leading: CircleAvatar(
+                          child: Text(classModel.name[0]),
+                          backgroundColor: AppColors.accent1,
+                          foregroundColor: Colors.white,
+                        ),
+                        title: Text(classModel.name),
+                        subtitle: Text(classModel.subject),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToDocumentScanScreen(context, classModel);
+                        },
+                      ),
+                    )
+                    .toList(),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _navigateToDocumentScanScreen(
+    BuildContext context,
+    ClassModel classModel,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DocumentScanScreen(classID: classModel.id),
       ),
     );
   }

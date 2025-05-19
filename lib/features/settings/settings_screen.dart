@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hajiri/common/widgets/custom_app_bar.dart';
 import 'package:hajiri/core/database/database_service.dart';
 import 'package:hajiri/providers/settings_provider.dart';
 import 'package:hajiri/providers/backup_provider.dart';
@@ -16,8 +15,8 @@ class SettingsScreen extends ConsumerWidget {
     final isPinEnabled = settings['pinEnabled'] as bool? ?? false;
 
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Settings', showBackButton: false),
       body: ListView(
+        physics: const BouncingScrollPhysics(),
         children: [
           const SizedBox(height: 16),
           _buildSection(context, 'Appearance'),
@@ -71,7 +70,7 @@ class SettingsScreen extends ConsumerWidget {
           _buildSection(context, 'About'),
           ListTile(
             leading: const Icon(Icons.info),
-            title: const Text('About Hajiri'),
+            title: const Text('About AttendAI'),
             subtitle: const Text('Version 1.0.0'),
             onTap: () => _showAboutDialog(context),
           ),
@@ -254,18 +253,18 @@ class SettingsScreen extends ConsumerWidget {
   void _showAboutDialog(BuildContext context) {
     showAboutDialog(
       context: context,
-      applicationName: 'Hajiri',
+      applicationName: 'AttendAI',
       applicationVersion: '1.0.0',
       applicationIcon: Image.asset(
         'assets/icon/icon.png',
         width: 48,
         height: 48,
       ),
-      applicationLegalese: '© 2025 Hajiri App',
+      applicationLegalese: '© 2025 AttendAI App',
       children: [
         const SizedBox(height: 24),
         const Text(
-          'Hajiri is a fully offline attendance management app for teachers and educators. '
+          'AttendAI is a fully offline attendance management app for teachers and educators. '
           'Manage classes, students, and attendance records without requiring an internet connection.',
         ),
       ],

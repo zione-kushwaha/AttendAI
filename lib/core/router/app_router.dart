@@ -9,13 +9,13 @@ import 'package:hajiri/features/attendance/class_attendance_screen.dart';
 import 'package:hajiri/features/attendance/take_attendance_screen.dart';
 import 'package:hajiri/features/reports/reports_screen.dart';
 import 'package:hajiri/features/settings/settings_screen.dart';
+import 'package:hajiri/features/auth/pin_screen.dart';
 import 'package:hajiri/models/class_model.dart';
 import 'package:hajiri/models/student_model.dart';
 
 import '../../features/classes/class_detail_screen.dart';
 import '../../features/home/home_screen.dart';
 
-/// AppRouter manages all the routes in the application.
 /// It provides both named routes and helper methods for navigation.
 class AppRouter {
   /// Route names
@@ -33,11 +33,16 @@ class AppRouter {
   static const String takeAttendance = '/attendance/take';
   static const String reports = '/reports';
   static const String settings = '/settings';
+  static const String pin = '/pin'; // Add PIN route
 
   /// Route generator
   static Route<dynamic> generateRoute(RouteSettings settings) {
     WidgetBuilder builder;
     switch (settings.name) {
+      case pin:
+        builder = (_) => const PinScreen();
+        break;
+
       case home:
         builder = (_) => const HomeScreen();
         break;

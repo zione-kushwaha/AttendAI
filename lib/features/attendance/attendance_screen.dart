@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hajiri/common/widgets/custom_app_bar.dart';
 import 'package:hajiri/common/widgets/empty_state_widget.dart';
 import 'package:hajiri/models/class_model.dart';
 import 'package:hajiri/providers/class_provider.dart';
@@ -18,7 +17,6 @@ class AttendanceScreen extends ConsumerWidget {
     final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
 
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Attendance', showBackButton: false),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -125,8 +123,8 @@ class AttendanceScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color:
                           isScheduledToday
-                              ? Colors.green.withOpacity(0.2)
-                              : Colors.grey.withOpacity(0.2),
+                              ? Colors.green.withValues(alpha: .2)
+                              : Colors.grey.withValues(alpha: .2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(

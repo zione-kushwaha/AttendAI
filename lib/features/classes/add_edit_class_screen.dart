@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 class AddEditClassScreen extends ConsumerStatefulWidget {
   final ClassModel? classModel;
 
-  const AddEditClassScreen({Key? key, this.classModel}) : super(key: key);
+  const AddEditClassScreen({super.key, this.classModel});
 
   @override
   ConsumerState<AddEditClassScreen> createState() => _AddEditClassScreenState();
@@ -77,6 +77,7 @@ class _AddEditClassScreenState extends ConsumerState<AddEditClassScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
             TextFormField(

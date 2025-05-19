@@ -8,13 +8,13 @@ class CustomCard extends StatelessWidget {
   final double elevation;
 
   const CustomCard({
-    Key? key,
+    super.key,
     required this.child,
     this.onTap,
     this.padding = const EdgeInsets.all(16),
     this.color,
     this.elevation = 2,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

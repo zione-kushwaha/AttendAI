@@ -7,12 +7,12 @@ class EmptyStateWidget extends StatelessWidget {
   final VoidCallback? onButtonPressed;
 
   const EmptyStateWidget({
-    Key? key,
+    super.key,
     required this.message,
     this.icon = Icons.sentiment_dissatisfied,
     this.buttonText,
     this.onButtonPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

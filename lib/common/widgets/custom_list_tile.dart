@@ -9,14 +9,14 @@ class CustomListTile extends StatelessWidget {
   final bool isThreeLine;
 
   const CustomListTile({
-    Key? key,
+    super.key,
     required this.title,
     this.subtitle,
     this.leading,
     this.actions,
     this.onTap,
     this.isThreeLine = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

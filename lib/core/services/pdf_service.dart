@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:hajiri/models/attendance_model.dart';
 import 'package:hajiri/models/class_model.dart';
@@ -81,41 +80,20 @@ class PdfService {
     }
   }
 
-  Future<Uint8List> _loadLogo() async {
-    try {
-      final ByteData imageData =
-          await rootBundle.load('assets/icon/app_icon.png');
-      return imageData.buffer.asUint8List();
-    } catch (e) {
-      print('Error loading logo: $e');
-      // Return a simple placeholder
-      final placeholder = pw.Document();
-      placeholder.addPage(
-        pw.Page(
-          build: (context) => pw.Center(
-            child: pw.Text(
-              'H',
-              style: const pw.TextStyle(fontSize: 40),
-            ),
-          ),
-        ),
-      );
-      return await placeholder.save();
-    }
-  }
-
   Future<void> _addCoverPage(ClassModel classModel, int studentCount) async {
     final now = DateTime.now();
     final start = now.subtract(const Duration(days: 30));
     final end = now;
 
-    _doc!.addPage(await _buildCoverPage(
-      classModel: classModel,
-      startDate: start,
-      endDate: end,
-      studentCount: studentCount,
-      stats: {},
-    ));
+    _doc!.addPage(
+      await _buildCoverPage(
+        classModel: classModel,
+        startDate: start,
+        endDate: end,
+        studentCount: studentCount,
+        stats: {},
+      ),
+    );
   }
 
   Future<void> _addSummaryPage(List<AttendanceRecord> records) async {
@@ -124,25 +102,31 @@ class PdfService {
   }
 
   Future<void> _addDetailedRecordsPage(
-      List<StudentModel> students, List<AttendanceRecord> records) async {
+    List<StudentModel> students,
+    List<AttendanceRecord> records,
+  ) async {
     final now = DateTime.now();
     final start = now.subtract(const Duration(days: 30));
     final end = now;
 
-    _doc!.addPage(await _buildStudentDetailsPage(
-      students: students,
-      records: records,
-      startDate: start,
-      endDate: end,
-    ));
+    _doc!.addPage(
+      await _buildStudentDetailsPage(
+        students: students,
+        records: records,
+        startDate: start,
+        endDate: end,
+      ),
+    );
 
-    _doc!.addPage(await _buildDailyRecordsPage(
-      classModel: ClassModel(id: '', name: '', subject: '', schedule: {}),
-      students: students,
-      records: records,
-      startDate: start,
-      endDate: end,
-    ));
+    _doc!.addPage(
+      await _buildDailyRecordsPage(
+        classModel: ClassModel(id: '', name: '', subject: '', schedule: {}),
+        students: students,
+        records: records,
+        startDate: start,
+        endDate: end,
+      ),
+    );
   }
 
   Future<pw.Page> _buildCoverPage({
@@ -154,52 +138,53 @@ class PdfService {
   }) async {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
-      build: (context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-          pw.SizedBox(height: 40),
-          if (_logo != null)
-            pw.Image(pw.MemoryImage(_logo!), width: 100, height: 100),
-          pw.SizedBox(height: 20),
-          pw.Text(
-            'Attendance Report',
-            style: pw.TextStyle(
-              font: _boldFont,
-              fontSize: 24,
-              color: PdfColors.blue800,
-            ),
+      build:
+          (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.SizedBox(height: 40),
+              if (_logo != null)
+                pw.Image(pw.MemoryImage(_logo!), width: 100, height: 100),
+              pw.SizedBox(height: 20),
+              pw.Text(
+                'Attendance Report',
+                style: pw.TextStyle(
+                  font: _boldFont,
+                  fontSize: 24,
+                  color: PdfColors.blue800,
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text(
+                classModel.name,
+                style: pw.TextStyle(font: _boldFont, fontSize: 20),
+              ),
+              pw.Text(
+                classModel.subject,
+                style: pw.TextStyle(font: _regularFont, fontSize: 16),
+              ),
+              pw.SizedBox(height: 40),
+              pw.Text(
+                'Report Period',
+                style: pw.TextStyle(font: _boldFont, fontSize: 16),
+              ),
+              pw.Text(
+                '${DateFormat('MMM d, yyyy').format(startDate)} - ${DateFormat('MMM d, yyyy').format(endDate)}',
+                style: pw.TextStyle(font: _regularFont, fontSize: 14),
+              ),
+              pw.SizedBox(height: 40),
+              _buildSummaryBox(studentCount, stats),
+              pw.Spacer(),
+              pw.Text(
+                'Generated on: ${DateFormat.yMMMMd().format(DateTime.now())}',
+                style: pw.TextStyle(
+                  font: _regularFont,
+                  fontSize: 12,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ],
           ),
-          pw.SizedBox(height: 20),
-          pw.Text(
-            classModel.name,
-            style: pw.TextStyle(font: _boldFont, fontSize: 20),
-          ),
-          pw.Text(
-            classModel.subject,
-            style: pw.TextStyle(font: _regularFont, fontSize: 16),
-          ),
-          pw.SizedBox(height: 40),
-          pw.Text(
-            'Report Period',
-            style: pw.TextStyle(font: _boldFont, fontSize: 16),
-          ),
-          pw.Text(
-            '${DateFormat('MMM d, yyyy').format(startDate)} - ${DateFormat('MMM d, yyyy').format(endDate)}',
-            style: pw.TextStyle(font: _regularFont, fontSize: 14),
-          ),
-          pw.SizedBox(height: 40),
-          _buildSummaryBox(studentCount, stats),
-          pw.Spacer(),
-          pw.Text(
-            'Generated on: ${DateFormat.yMMMMd().format(DateTime.now())}',
-            style: pw.TextStyle(
-              font: _regularFont,
-              fontSize: 12,
-              color: PdfColors.grey700,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -250,53 +235,52 @@ class PdfService {
   Future<pw.Page> _buildStatsPage(Map<String, dynamic> stats) async {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
-      build: (context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Header(
-            level: 0,
-            child: pw.Text(
-              'Attendance Statistics',
-              style: pw.TextStyle(
-                font: _boldFont,
-                fontSize: 20,
-                color: PdfColors.blue800,
+      build:
+          (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(
+                level: 0,
+                child: pw.Text(
+                  'Attendance Statistics',
+                  style: pw.TextStyle(
+                    font: _boldFont,
+                    fontSize: 20,
+                    color: PdfColors.blue800,
+                  ),
+                ),
               ),
-            ),
-          ),
-          pw.SizedBox(height: 20),
-          pw.TableHelper.fromTextArray(
-            headerStyle: pw.TextStyle(
-              font: _boldFont,
-              color: PdfColors.white,
-            ),
-            headerDecoration: pw.BoxDecoration(
-              color: PdfColors.blue800,
-            ),
-            cellStyle: pw.TextStyle(font: _regularFont),
-            headerAlignment: pw.Alignment.center,
-            cellAlignment: pw.Alignment.center,
-            headers: ['Category', 'Count', 'Percentage'],
-            data: [
-              [
-                'Present',
-                stats['presentDays'].toString(),
-                '${stats['presentPercentage'].toStringAsFixed(1)}%'
-              ],
-              [
-                'Absent',
-                stats['absentDays'].toString(),
-                '${stats['absentPercentage'].toStringAsFixed(1)}%'
-              ],
-              [
-                'Late',
-                stats['lateDays'].toString(),
-                '${stats['latePercentage'].toStringAsFixed(1)}%'
-              ],
+              pw.SizedBox(height: 20),
+              pw.TableHelper.fromTextArray(
+                headerStyle: pw.TextStyle(
+                  font: _boldFont,
+                  color: PdfColors.white,
+                ),
+                headerDecoration: pw.BoxDecoration(color: PdfColors.blue800),
+                cellStyle: pw.TextStyle(font: _regularFont),
+                headerAlignment: pw.Alignment.center,
+                cellAlignment: pw.Alignment.center,
+                headers: ['Category', 'Count', 'Percentage'],
+                data: [
+                  [
+                    'Present',
+                    stats['presentDays'].toString(),
+                    '${stats['presentPercentage'].toStringAsFixed(1)}%',
+                  ],
+                  [
+                    'Absent',
+                    stats['absentDays'].toString(),
+                    '${stats['absentPercentage'].toStringAsFixed(1)}%',
+                  ],
+                  [
+                    'Late',
+                    stats['lateDays'].toString(),
+                    '${stats['latePercentage'].toStringAsFixed(1)}%',
+                  ],
+                ],
+              ),
             ],
           ),
-        ],
-      ),
     );
   }
 
@@ -307,77 +291,88 @@ class PdfService {
     required DateTime endDate,
   }) async {
     // Filter records by date range
-    final filteredRecords = records
-        .where((r) =>
-            r.date.isAfter(startDate.subtract(const Duration(days: 1))) &&
-            r.date.isBefore(endDate.add(const Duration(days: 1))))
-        .toList();
+    final filteredRecords =
+        records
+            .where(
+              (r) =>
+                  r.date.isAfter(startDate.subtract(const Duration(days: 1))) &&
+                  r.date.isBefore(endDate.add(const Duration(days: 1))),
+            )
+            .toList();
 
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
-      build: (context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Header(
-            level: 0,
-            child: pw.Text(
-              'Student Attendance Details',
-              style: pw.TextStyle(
-                font: _boldFont,
-                fontSize: 20,
-                color: PdfColors.blue800,
+      build:
+          (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(
+                level: 0,
+                child: pw.Text(
+                  'Student Attendance Details',
+                  style: pw.TextStyle(
+                    font: _boldFont,
+                    fontSize: 20,
+                    color: PdfColors.blue800,
+                  ),
+                ),
               ),
-            ),
-          ),
-          pw.SizedBox(height: 20),
-          pw.TableHelper.fromTextArray(
-            headerStyle: pw.TextStyle(
-              font: _boldFont,
-              color: PdfColors.white,
-            ),
-            headerDecoration: pw.BoxDecoration(
-              color: PdfColors.blue800,
-            ),
-            cellStyle: pw.TextStyle(font: _regularFont),
-            headerAlignment: pw.Alignment.center,
-            cellAlignment: pw.Alignment.center,
-            headers: [
-              'Name',
-              'Roll No',
-              'Present',
-              'Absent',
-              'Late',
-              'Attendance %'
-            ],
-            data: students.map((student) {
-              final studentRecords = filteredRecords
-                  .where((r) => r.studentId == student.id)
-                  .toList();
-              final totalDays = studentRecords.length;
-              final presentCount = studentRecords
-                  .where((r) => r.status == AttendanceStatus.present)
-                  .length;
-              final absentCount = studentRecords
-                  .where((r) => r.status == AttendanceStatus.absent)
-                  .length;
-              final lateCount = studentRecords
-                  .where((r) => r.status == AttendanceStatus.late)
-                  .length;
-              final attendancePercentage =
-                  totalDays > 0 ? (presentCount / totalDays * 100) : 0.0;
+              pw.SizedBox(height: 20),
+              pw.TableHelper.fromTextArray(
+                headerStyle: pw.TextStyle(
+                  font: _boldFont,
+                  color: PdfColors.white,
+                ),
+                headerDecoration: pw.BoxDecoration(color: PdfColors.blue800),
+                cellStyle: pw.TextStyle(font: _regularFont),
+                headerAlignment: pw.Alignment.center,
+                cellAlignment: pw.Alignment.center,
+                headers: [
+                  'Name',
+                  'Roll No',
+                  'Present',
+                  'Absent',
+                  'Late',
+                  'Attendance %',
+                ],
+                data:
+                    students.map((student) {
+                      final studentRecords =
+                          filteredRecords
+                              .where((r) => r.studentId == student.id)
+                              .toList();
+                      final totalDays = studentRecords.length;
+                      final presentCount =
+                          studentRecords
+                              .where(
+                                (r) => r.status == AttendanceStatus.present,
+                              )
+                              .length;
+                      final absentCount =
+                          studentRecords
+                              .where((r) => r.status == AttendanceStatus.absent)
+                              .length;
+                      final lateCount =
+                          studentRecords
+                              .where((r) => r.status == AttendanceStatus.late)
+                              .length;
+                      final attendancePercentage =
+                          totalDays > 0
+                              ? (presentCount / totalDays * 100)
+                              : 0.0;
 
-              return [
-                student.name,
-                student.rollNumber,
-                presentCount.toString(),
-                absentCount.toString(),
-                lateCount.toString(),
-                '${attendancePercentage.toStringAsFixed(1)}%',
-              ];
-            }).toList(),
+                      return [
+                        student.name,
+                        student.rollNumber,
+                        presentCount.toString(),
+                        absentCount.toString(),
+                        lateCount.toString(),
+                        '${attendancePercentage.toStringAsFixed(1)}%',
+                      ];
+                    }).toList(),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -389,17 +384,23 @@ class PdfService {
     required DateTime endDate,
   }) async {
     // Filter records by date range
-    final filteredRecords = records
-        .where((r) =>
-            r.date.isAfter(startDate.subtract(const Duration(days: 1))) &&
-            r.date.isBefore(endDate.add(const Duration(days: 1))))
-        .toList();
+    final filteredRecords =
+        records
+            .where(
+              (r) =>
+                  r.date.isAfter(startDate.subtract(const Duration(days: 1))) &&
+                  r.date.isBefore(endDate.add(const Duration(days: 1))),
+            )
+            .toList();
 
     // Group records by date
     final recordsByDate = <DateTime, List<AttendanceRecord>>{};
     for (var record in filteredRecords) {
-      final date =
-          DateTime(record.date.year, record.date.month, record.date.day);
+      final date = DateTime(
+        record.date.year,
+        record.date.month,
+        record.date.day,
+      );
       recordsByDate.putIfAbsent(date, () => []).add(record);
     }
 
@@ -408,86 +409,89 @@ class PdfService {
 
     return pw.Page(
       pageFormat: PdfPageFormat.a4.landscape,
-      build: (context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Header(
-            level: 0,
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'Daily Attendance Records',
-                  style: pw.TextStyle(
-                    font: _boldFont,
-                    fontSize: 20,
-                    color: PdfColors.blue800,
-                  ),
+      build:
+          (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(
+                level: 0,
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Daily Attendance Records',
+                      style: pw.TextStyle(
+                        font: _boldFont,
+                        fontSize: 20,
+                        color: PdfColors.blue800,
+                      ),
+                    ),
+                    pw.Text(
+                      'P = Present, A = Absent, L = Late',
+                      style: pw.TextStyle(
+                        font: _regularFont,
+                        fontSize: 10,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                  ],
                 ),
-                pw.Text(
-                  'P = Present, A = Absent, L = Late',
-                  style: pw.TextStyle(
-                    font: _regularFont,
-                    fontSize: 10,
-                    color: PdfColors.grey700,
-                  ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.TableHelper.fromTextArray(
+                headerStyle: pw.TextStyle(
+                  font: _boldFont,
+                  color: PdfColors.white,
                 ),
-              ],
-            ),
-          ),
-          pw.SizedBox(height: 20),
-          pw.TableHelper.fromTextArray(
-            headerStyle: pw.TextStyle(
-              font: _boldFont,
-              color: PdfColors.white,
-            ),
-            headerDecoration: pw.BoxDecoration(
-              color: PdfColors.blue800,
-            ),
-            cellStyle: pw.TextStyle(font: _regularFont),
-            headerAlignment: pw.Alignment.center,
-            cellAlignment: pw.Alignment.center,
-            columnWidths: {
-              0: const pw.FlexColumnWidth(3), // Name
-              1: const pw.FlexColumnWidth(1.5), // Roll No
-              for (var i = 2; i < dates.length + 2; i++)
-                i: const pw.FlexColumnWidth(1),
-            },
-            headers: [
-              'Name',
-              'Roll No',
-              ...dates.map((d) => DateFormat('MMM d').format(d))
+                headerDecoration: pw.BoxDecoration(color: PdfColors.blue800),
+                cellStyle: pw.TextStyle(font: _regularFont),
+                headerAlignment: pw.Alignment.center,
+                cellAlignment: pw.Alignment.center,
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(3), // Name
+                  1: const pw.FlexColumnWidth(1.5), // Roll No
+                  for (var i = 2; i < dates.length + 2; i++)
+                    i: const pw.FlexColumnWidth(1),
+                },
+                headers: [
+                  'Name',
+                  'Roll No',
+                  ...dates.map((d) => DateFormat('MMM d').format(d)),
+                ],
+                data:
+                    students
+                        .map(
+                          (student) => [
+                            student.name,
+                            student.rollNumber,
+                            ...dates.map((date) {
+                              final record = recordsByDate[date]?.firstWhere(
+                                (r) => r.studentId == student.id,
+                                orElse:
+                                    () => AttendanceRecord(
+                                      classId: classModel.id,
+                                      studentId: student.id,
+                                      date: date,
+                                      status: AttendanceStatus.absent,
+                                    ),
+                              );
+                              switch (record?.status) {
+                                case AttendanceStatus.present:
+                                  return 'P';
+                                case AttendanceStatus.absent:
+                                  return 'A';
+                                case AttendanceStatus.late:
+                                  return 'L';
+                                default:
+                                  return '-';
+                              }
+                            }),
+                          ],
+                        )
+                        .toList(),
+              ),
             ],
-            data: students
-                .map((student) => [
-                      student.name,
-                      student.rollNumber,
-                      ...dates.map((date) {
-                        final record = recordsByDate[date]?.firstWhere(
-                          (r) => r.studentId == student.id,
-                          orElse: () => AttendanceRecord(
-                            classId: classModel.id,
-                            studentId: student.id,
-                            date: date,
-                            status: AttendanceStatus.absent,
-                          ),
-                        );
-                        switch (record?.status) {
-                          case AttendanceStatus.present:
-                            return 'P';
-                          case AttendanceStatus.absent:
-                            return 'A';
-                          case AttendanceStatus.late:
-                            return 'L';
-                          default:
-                            return '-';
-                        }
-                      }),
-                    ])
-                .toList(),
           ),
-        ],
-      ),
     );
   }
 

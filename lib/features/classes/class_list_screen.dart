@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:hajiri/common/widgets/custom_app_bar.dart';
 import 'package:hajiri/common/widgets/animated_empty_state.dart';
 import 'package:hajiri/common/widgets/stylish_container.dart';
 import 'package:hajiri/common/theme/enhanced_app_theme.dart';
@@ -12,7 +11,7 @@ import 'package:hajiri/features/classes/add_edit_class_screen.dart';
 import 'class_detail_screen.dart';
 
 class ClassListScreen extends ConsumerWidget {
-  const ClassListScreen({Key? key}) : super(key: key);
+  const ClassListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,7 +19,6 @@ class ClassListScreen extends ConsumerWidget {
     final students = ref.watch(studentProvider);
 
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Classes', showBackButton: false),
       body:
           classes.isEmpty
               ? AnimatedEmptyState(
@@ -31,6 +29,7 @@ class ClassListScreen extends ConsumerWidget {
                 animationAsset: 'assets/animations/empty_state.json',
               )
               : ListView.builder(
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 itemCount: classes.length,
                 itemBuilder: (context, index) {
@@ -319,8 +318,11 @@ class ClassListScreen extends ConsumerWidget {
                 if (hasStudents) ...[
                   const SizedBox(height: 8),
                   const Text(
-                    'Warning: This class has students. Deleting it will remove this class from their profiles.',
-                    style: TextStyle(color: Colors.red),
+                    'Warning: This class has students. Students enrolled ONLY in this class will be permanently deleted.',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ],
@@ -334,21 +336,22 @@ class ClassListScreen extends ConsumerWidget {
               ),
               TextButton(
                 onPressed: () {
-                  if (hasStudents) {
-                    // Update student records to remove this class
-                    for (final student in students) {
-                      if (student.classIds.contains(classItem.id)) {
-                        // Use the removeClass method provided by StudentModel
-                        student.removeClass(classItem.id);
-                        // Notify the provider about the change
-                        ref
-                            .read(studentProvider.notifier)
-                            .updateStudent(student);
-                      }
-                    }
-                  }
-                  // Delete the class
+                  // Delete the class (the provider now handles the student deletion)
                   ref.read(classProvider.notifier).deleteClass(classItem.id);
+
+                  // Show confirmation to the user about the deletion
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        hasStudents
+                            ? '${classItem.name} and associated students have been deleted'
+                            : '${classItem.name} has been deleted',
+                      ),
+                      duration: const Duration(seconds: 3),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+
                   Navigator.of(context).pop();
                 },
                 child: const Text(
