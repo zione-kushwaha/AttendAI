@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hajiri/common/theme/enhanced_app_theme.dart';
-import 'package:hajiri/core/router/app_router.dart';
 import 'package:hajiri/features/home/home_screen.dart';
 import 'package:hajiri/providers/settings_provider.dart';
 
 class PinScreen extends ConsumerStatefulWidget {
-  const PinScreen({Key? key}) : super(key: key);
+  const PinScreen({super.key});
 
   @override
   ConsumerState<PinScreen> createState() => _PinScreenState();
@@ -86,7 +85,10 @@ class _PinScreenState extends ConsumerState<PinScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.primary, AppColors.secondary.withOpacity(0.8)],
+            colors: [
+              AppColors.primary,
+              AppColors.secondary.withValues(alpha: .8),
+            ],
           ),
         ),
         child: SafeArea(
@@ -125,7 +127,7 @@ class _PinScreenState extends ConsumerState<PinScreen> {
                           : 'Please enter your 4-digit PIN to continue',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: .9),
                         fontSize: 16,
                       ),
                     ),
@@ -145,7 +147,7 @@ class _PinScreenState extends ConsumerState<PinScreen> {
                         decoration: InputDecoration(
                           hintText: '• • • •',
                           hintStyle: TextStyle(
-                            color: Colors.white.withOpacity(0.6),
+                            color: Colors.white.withValues(alpha: .6),
                             fontSize: 24,
                           ),
                           counterText: '',
@@ -155,7 +157,7 @@ class _PinScreenState extends ConsumerState<PinScreen> {
                               color:
                                   _isError
                                       ? Colors.red
-                                      : Colors.white.withOpacity(0.5),
+                                      : Colors.white.withValues(alpha: .5),
                               width: 2,
                             ),
                           ),
@@ -167,7 +169,7 @@ class _PinScreenState extends ConsumerState<PinScreen> {
                             ),
                           ),
                           filled: true,
-                          fillColor: Colors.white.withOpacity(0.1),
+                          fillColor: Colors.white.withValues(alpha: .1),
                         ),
                         onSubmitted: (_) => _verifyPin(),
                       ),
