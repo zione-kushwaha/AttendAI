@@ -1,4 +1,4 @@
-# Hajiri - Attendance Management System
+# AttenAI - Attendance Management System
 
 Hajiri is a comprehensive Flutter-based attendance management application designed for educational institutions. It allows teachers and administrators to manage classes, students, and attendance records efficiently.
 
